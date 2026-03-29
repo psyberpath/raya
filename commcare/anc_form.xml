@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<h:html xmlns:h="http://www.w3.org/1999/xhtml"
+        xmlns:orx="http://openrosa.org/jr/xforms"
+        xmlns="http://www.w3.org/2002/xforms"
+        xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+        xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <h:title>Antenatal Risk Scoring</h:title>
+    <model>
+      <!-- 1. Form Instance -->
+      <instance>
+        <data id="anc_risk_scoring" xmlns="http://openrosa.org/formdesigner/ANC-RISK-SCORING-V1">
+          <gestational_age />
+          <bp_systolic />
+          <bp_diastolic />
+          <oedema />
+          <haemoglobin />
+          <previous_complications />
+          <is_high_risk />
+          <referral_slip_text />
+        </data>
+      </instance>
+      
+      <!-- 2. ITEXT BLOCK -->
+      <!-- CommCare requires an explicit <itext> dictionary. Without it, the Javarosa 'getLocalizer()' engine crashes. -->
+      <itext>
+        <translation lang="en" default="">
+          <text id="gestational_age-label">
+            <value>Gestational Age (Weeks)</value>
+          </text>
+          <text id="bp_systolic-label">
+            <value>Blood Pressure (Systolic - e.g. 120)</value>
+          </text>
+          <text id="bp_diastolic-label">
+            <value>Blood Pressure (Diastolic - e.g. 80)</value>
+          </text>
+          <text id="oedema-label">
+            <value>Oedema Present?</value>
+          </text>
+          <text id="oedema-yes-label">
+            <value>Yes</value>
+          </text>
+          <text id="oedema-no-label">
+            <value>No</value>
+          </text>
+          <text id="haemoglobin-label">
+            <value>Haemoglobin Count (g/dL)</value>
+          </text>
+          <text id="previous_complications-label">
+            <value>Previous Issues/Complications (Optional)</value>
+          </text>
+          <text id="referral_slip_text-label">
+            <value>🚨 CLINICAL TRIAGE WARNING 🚨</value>
+          </text>
+        </translation>
+      </itext>
+
+      <!-- 3. BINDINGS -->
+      <bind nodeset="/data/gestational_age" type="int" required="true()" />
+      <bind nodeset="/data/bp_systolic" type="int" required="true()" />
+      <bind nodeset="/data/bp_diastolic" type="int" required="true()" />
+      <bind nodeset="/data/oedema" type="string" required="true()" />
+      <bind nodeset="/data/haemoglobin" type="decimal" />
+      <bind nodeset="/data/previous_complications" type="string" />
+      
+      <!-- Evaluates standard pre-eclampsia threshold. if(condition, true_val, false_val) -->
+      <bind nodeset="/data/is_high_risk" type="string" 
+            calculate="if(/data/bp_systolic &gt;= 140 or /data/bp_diastolic &gt;= 90, 'yes', 'no')" />
+      
+      <!-- The relevant attribute acts as a display condition. This only triggers if the high risk logic is true. -->
+      <bind nodeset="/data/referral_slip_text" type="string" 
+            relevant="/data/is_high_risk = 'yes'"
+            calculate="concat('🚨 OFFICIAL REFERRAL SLIP 🚨&#10;', 'Patient ID/Name: [Filled by Case UI]&#10;', 'Risk Reason: BP ', /data/bp_systolic, '/', /data/bp_diastolic, ' (Gestational: ', /data/gestational_age, ' weeks)&#10;', 'Action: URGENT HOSPITAL REFERRAL&#10;', 'CHEW Name: [Mobile Worker]&#10;', 'Date: ', today())" />
+    </model>
+  </h:head>
+  <h:body>
+    <!-- Screen 1: User Interfaces -->
+    <!-- All static labels are mapped to jr:itext() calls which interact with the localizer safely -->
+    <input ref="/data/gestational_age">
+      <label ref="jr:itext('gestational_age-label')"/>
+    </input>
+    <input ref="/data/bp_systolic">
+      <label ref="jr:itext('bp_systolic-label')"/>
+    </input>
+    <input ref="/data/bp_diastolic">
+      <label ref="jr:itext('bp_diastolic-label')"/>
+    </input>
+    <select1 ref="/data/oedema">
+      <label ref="jr:itext('oedema-label')"/>
+      <item>
+        <label ref="jr:itext('oedema-yes-label')"/>
+        <value>yes</value>
+      </item>
+      <item>
+        <label ref="jr:itext('oedema-no-label')"/>
+        <value>no</value>
+      </item>
+    </select1>
+    <input ref="/data/haemoglobin">
+      <label ref="jr:itext('haemoglobin-label')"/>
+    </input>
+    <input ref="/data/previous_complications">
+      <label ref="jr:itext('previous_complications-label')"/>
+    </input>
+    
+    <!-- Screen 2: Dynamic Referral UI -->
+    <!-- The group conditionally renders because /data/referral_slip_text is bound with relevant="..." -->
+    <group appearance="field-list" ref="/data/referral_slip_text">
+      <label ref="jr:itext('referral_slip_text-label')"/>
+      <trigger ref="/data/referral_slip_text">
+        <!-- Output renders the dynamically generated calculation directly into the form -->
+        <label><output value="/data/referral_slip_text"/></label>
+      </trigger>
+    </group>
+  </h:body>
+</h:html>
